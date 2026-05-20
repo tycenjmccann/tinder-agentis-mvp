@@ -1,0 +1,109 @@
+.workflow-flyout {
+  position: fixed;
+  top: 0;
+  left: var(--sidebar-width-collapsed);
+  bottom: 0;
+  width: 320px;
+  background: var(--color-surface-2);
+  border-right: 1px solid var(--color-surface-4);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(-100%);
+  opacity: 0;
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 150ms ease;
+}
+
+.workflow-flyout--open {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.workflow-flyout__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-surface-4);
+}
+
+.workflow-flyout__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.workflow-flyout__close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.workflow-flyout__close:hover {
+  background: var(--color-surface-3);
+  color: var(--color-text-primary);
+}
+
+.workflow-flyout__close:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+.workflow-flyout__list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-2);
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-surface-4) transparent;
+}
+
+.workflow-flyout__loading,
+.workflow-flyout__empty {
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.workflow-flyout__load-more {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: 1px solid var(--color-surface-4);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  border-radius: var(--radius-md);
+  margin-top: var(--space-2);
+  transition: background-color 150ms ease;
+}
+
+.workflow-flyout__load-more:hover {
+  background: var(--color-surface-3);
+}
+
+.workflow-flyout__load-more:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.workflow-flyout__load-more:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workflow-flyout {
+    transition: none;
+  }
+}
