@@ -1,0 +1,32 @@
+.sidebar-tooltip-wrapper {
+  position: relative;
+}
+
+.sidebar-tooltip {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 6px 12px;
+  background: var(--color-surface-3);
+  border: 1px solid var(--color-surface-4);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms ease;
+  z-index: 60;
+}
+
+.sidebar-tooltip--visible {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-tooltip {
+    transition: none;
+  }
+}
