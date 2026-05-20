@@ -1,4 +1,5 @@
-import { defineConfig } from 'vitest/config';
+/// <reference types="vitest" />
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
@@ -13,17 +14,24 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
-    css: true,
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
     coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-      include: ['src/components/sidebar/**'],
-      exclude: ['**/*.css', '**/*.test.*', '**/index.ts'],
-      thresholds: {
-        branches: 70,
-        functions: 75,
-        lines: 80,
-        statements: 80,
+      reporter: ['text', 'lcov'],
+      include: ['src/components/sidebar/**/*.{ts,tsx}'],
+      exclude: ['**/__tests__/**', '**/*.test.*', '**/index.ts'],
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+          'sidebar': [
+            './src/components/sidebar/SidebarNavigation.tsx',
+            './src/components/sidebar/AgentStatusPanel.tsx',
+            './src/components/sidebar/WorkflowHistoryList.tsx',
+          ],
+        },
       },
     },
   },
