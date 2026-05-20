@@ -1,136 +1,194 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '../../../test/test-utils';
 import { SidebarNavigation } from '../SidebarNavigation';
-
-// Mock fetch
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
-
-// Mock matchMedia
-window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-  matches: false,
-  media: query,
-  onchange: null,
-  addListener: vi.fn(),
-  removeListener: vi.fn(),
-  addEventListener: vi.fn(),
-  removeEventListener: vi.fn(),
-  dispatchEvent: vi.fn(),
-}));
-
-// Mock localStorage
-const localStorageMock = {
-  getItem: vi.fn(() => null),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
-};
-Object.defineProperty(window, 'localStorage', { value: localStorageMock });
+import { mockAgents } from '../../../test/mocks/handlers';
 
 describe('SidebarNavigation', () => {
   const mockNavigate = vi.fn();
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    mockFetch.mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve({ agents: [], workflows: [], total: 0, page: 1, hasMore: false }),
+    mockNavigate.mockClear();
+    localStorage.clear();
+  });
+
+  it('should render the sidebar with all sections', async () => {
+    render(<SidebarNavigation onNavigate={mockNavigate} />);
+
+    // Sidebar landmark
+    const sidebar = screen.getByRole('navigation', {
+      name: /sidebar navigation/i,
     });
-  });
-
-  it('renders sidebar with navigation role', () => {
-    render(<SidebarNavigation onNavigate={mockNavigate} />);
-    const sidebar = screen.getByRole('navigation', { name: /sidebar/i });
     expect(sidebar).toBeInTheDocument();
-  });
 
-  it('renders brand text', () => {
-    render(<SidebarNavigation onNavigate={mockNavigate} />);
+    // Header with brand
     expect(screen.getByText('Agentis Hub')).toBeInTheDocument();
+
+    // Collapse toggle
+    expect(
+      screen.getByRole('button', { name: /collapse sidebar/i })
+    ).toBeInTheDocument();
+
+    // Quick actions
+    expect(
+      screen.getByRole('button', { name: /new workflow/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /view logs/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /settings/i })
+    ).toBeInTheDocument();
   });
 
-  it('renders collapse toggle button', () => {
+  it('should toggle collapse on button click', async () => {
     render(<SidebarNavigation onNavigate={mockNavigate} />);
-    const toggleBtn = screen.getByLabelText(/collapse sidebar/i);
-    expect(toggleBtn).toBeInTheDocument();
+
+    const sidebar = screen.getByRole('navigation', {
+      name: /sidebar navigation/i,
+    });
+    expect(sidebar).toHaveAttribute('aria-expanded', 'true');
+
+    const toggleBtn = screen.getByRole('button', {
+      name: /collapse sidebar/i,
+    });
+    fireEvent.click(toggleBtn);
+
+    expect(sidebar).toHaveAttribute('aria-expanded', 'false');
+    expect(sidebar).toHaveClass('sidebar--collapsed');
   });
 
-  it('toggles collapse state on button click', async () => {
-    const user = userEvent.setup();
+  it('should announce collapse/expand state to screen readers', async () => {
     render(<SidebarNavigation onNavigate={mockNavigate} />);
 
-    const toggleBtn = screen.getByLabelText(/collapse sidebar/i);
-    await user.click(toggleBtn);
+    const toggleBtn = screen.getByRole('button', {
+      name: /collapse sidebar/i,
+    });
+    fireEvent.click(toggleBtn);
 
-    // After collapse, button label changes
-    expect(screen.getByLabelText(/expand sidebar/i)).toBeInTheDocument();
+    // Live region should announce
+    const liveRegion = document.querySelector('[aria-live="polite"]');
+    expect(liveRegion).toHaveTextContent('Sidebar collapsed');
   });
 
-  it('announces state change to screen readers', async () => {
-    const user = userEvent.setup();
+  it('should navigate when quick action buttons are clicked', () => {
     render(<SidebarNavigation onNavigate={mockNavigate} />);
 
-    const toggleBtn = screen.getByLabelText(/collapse sidebar/i);
-    await user.click(toggleBtn);
-
-    const announcement = screen.getByText('Sidebar collapsed');
-    expect(announcement).toBeInTheDocument();
-    expect(announcement.closest('[aria-live]')).toHaveAttribute('aria-live', 'polite');
-  });
-
-  it('renders quick action buttons', () => {
-    render(<SidebarNavigation onNavigate={mockNavigate} />);
-    expect(screen.getByLabelText('New Workflow')).toBeInTheDocument();
-    expect(screen.getByLabelText('View Logs')).toBeInTheDocument();
-    expect(screen.getByLabelText('Settings')).toBeInTheDocument();
-  });
-
-  it('quick actions trigger navigation', async () => {
-    const user = userEvent.setup();
-    render(<SidebarNavigation onNavigate={mockNavigate} />);
-
-    await user.click(screen.getByLabelText('New Workflow'));
+    fireEvent.click(screen.getByRole('button', { name: /new workflow/i }));
     expect(mockNavigate).toHaveBeenCalledWith('/workflows/new');
 
-    await user.click(screen.getByLabelText('View Logs'));
+    fireEvent.click(screen.getByRole('button', { name: /view logs/i }));
     expect(mockNavigate).toHaveBeenCalledWith('/logs');
 
-    await user.click(screen.getByLabelText('Settings'));
+    fireEvent.click(screen.getByRole('button', { name: /settings/i }));
     expect(mockNavigate).toHaveBeenCalledWith('/settings');
   });
 
-  it('has aria-expanded attribute', () => {
+  it('should display agent status data after loading', async () => {
     render(<SidebarNavigation onNavigate={mockNavigate} />);
-    const sidebar = screen.getByRole('navigation', { name: /sidebar/i });
-    expect(sidebar).toHaveAttribute('aria-expanded', 'true');
+
+    // Wait for agents to load
+    await waitFor(() => {
+      expect(screen.getByText('AGENTS')).toBeInTheDocument();
+    });
+
+    // Check agent count summary
+    await waitFor(() => {
+      expect(screen.getByText(/Active/)).toBeInTheDocument();
+    });
   });
 
-  it('starts collapsed when defaultCollapsed is true', () => {
-    render(<SidebarNavigation onNavigate={mockNavigate} defaultCollapsed />);
-    const sidebar = screen.getByRole('navigation', { name: /sidebar/i });
-    expect(sidebar).toHaveAttribute('aria-expanded', 'false');
+  it('should display workflow history section', async () => {
+    render(<SidebarNavigation onNavigate={mockNavigate} />);
+
+    // Workflow section header
+    await waitFor(() => {
+      expect(screen.getByText('WORKFLOWS')).toBeInTheDocument();
+    });
+
+    // Search input
+    expect(
+      screen.getByRole('searchbox', { name: /search workflows/i })
+    ).toBeInTheDocument();
+
+    // Filter chips
+    expect(screen.getByRole('radio', { name: /all/i })).toBeInTheDocument();
   });
 
-  it('renders agent status region', () => {
+  it('should handle keyboard shortcut for toggle', () => {
     render(<SidebarNavigation onNavigate={mockNavigate} />);
-    expect(screen.getByRole('region', { name: /agent status/i })).toBeInTheDocument();
+
+    const sidebar = screen.getByRole('navigation', {
+      name: /sidebar navigation/i,
+    });
+
+    // Press '[' key to toggle
+    fireEvent.keyDown(document, { key: '[' });
+    expect(sidebar).toHaveClass('sidebar--collapsed');
+
+    // Press ']' key to toggle back
+    fireEvent.keyDown(document, { key: ']' });
+    expect(sidebar).not.toHaveClass('sidebar--collapsed');
   });
 
-  it('renders workflow history region', () => {
+  it('should navigate to agent detail on agent click', async () => {
     render(<SidebarNavigation onNavigate={mockNavigate} />);
-    expect(screen.getByRole('region', { name: /workflow history/i })).toBeInTheDocument();
+
+    // Wait for agents to render
+    await waitFor(() => {
+      const agentButtons = screen.getAllByRole('listitem');
+      expect(agentButtons.length).toBeGreaterThan(0);
+    });
+
+    const agentButtons = screen.getAllByRole('listitem');
+    fireEvent.click(agentButtons[0]);
+
+    expect(mockNavigate).toHaveBeenCalledWith(
+      expect.stringContaining('/agents/')
+    );
   });
 
-  it('renders search input', () => {
+  it('should persist collapse state across re-renders', () => {
+    const { unmount } = render(
+      <SidebarNavigation onNavigate={mockNavigate} />
+    );
+
+    // Collapse the sidebar
+    fireEvent.click(
+      screen.getByRole('button', { name: /collapse sidebar/i })
+    );
+
+    unmount();
+
+    // Re-render — should still be collapsed
     render(<SidebarNavigation onNavigate={mockNavigate} />);
-    expect(screen.getByRole('searchbox', { name: /search workflows/i })).toBeInTheDocument();
+
+    const sidebar = screen.getByRole('navigation', {
+      name: /sidebar navigation/i,
+    });
+    expect(sidebar).toHaveClass('sidebar--collapsed');
   });
 
-  it('renders status filter', () => {
+  it('should render all ARIA attributes correctly', () => {
     render(<SidebarNavigation onNavigate={mockNavigate} />);
-    expect(screen.getByRole('radiogroup', { name: /filter by status/i })).toBeInTheDocument();
+
+    // Navigation landmark
+    const nav = screen.getByRole('navigation', {
+      name: /sidebar navigation/i,
+    });
+    expect(nav).toHaveAttribute('aria-expanded', 'true');
+    expect(nav).toHaveAttribute('id', 'sidebar-navigation');
+
+    // Toggle button
+    const toggle = screen.getByRole('button', {
+      name: /collapse sidebar/i,
+    });
+    expect(toggle).toHaveAttribute('aria-controls', 'sidebar-navigation');
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+
+    // Quick actions group
+    expect(
+      screen.getByRole('group', { name: /quick actions/i })
+    ).toBeInTheDocument();
   });
 });

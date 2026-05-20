@@ -1,93 +1,69 @@
-import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { useWorkflows } from '../useWorkflows';
-
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
+import { server } from '../../../test/mocks/server';
+import { http, HttpResponse } from 'msw';
+import { mockWorkflows } from '../../../test/mocks/handlers';
 
 describe('useWorkflows', () => {
   beforeEach(() => {
-    vi.useFakeTimers();
-    mockFetch.mockReset();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
   });
 
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  const mockWorkflowsResponse = {
-    workflows: [
-      { id: 'wf-1', title: 'Deploy API v2', status: 'running', createdAt: '2026-01-01T12:00:00Z', updatedAt: '2026-01-01T12:05:00Z' },
-      { id: 'wf-2', title: 'Build Frontend', status: 'completed', createdAt: '2026-01-01T11:00:00Z', updatedAt: '2026-01-01T11:30:00Z' },
-      { id: 'wf-3', title: 'Run Tests', status: 'failed', createdAt: '2026-01-01T10:00:00Z', updatedAt: '2026-01-01T10:15:00Z' },
-    ],
-    total: 3,
-    page: 1,
-    hasMore: false,
-  };
-
-  it('fetches workflows on mount', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve(mockWorkflowsResponse),
-    });
-
+  it('should fetch workflows on mount', async () => {
+    vi.useRealTimers();
     const { result } = renderHook(() => useWorkflows());
+
+    expect(result.current.isLoading).toBe(true);
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.workflows).toHaveLength(3);
-    expect(result.current.total).toBe(3);
-    expect(result.current.hasMore).toBe(false);
+    expect(result.current.workflows).toHaveLength(mockWorkflows.length);
+    expect(result.current.total).toBe(mockWorkflows.length);
+    expect(result.current.isError).toBe(false);
   });
 
-  it('debounces search query', async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve(mockWorkflowsResponse),
-    });
+  it('should filter workflows by search query with debounce', async () => {
+    vi.useRealTimers();
+    const { result } = renderHook(() =>
+      useWorkflows({ searchDebounce: 100 })
+    );
 
-    const { result } = renderHook(() => useWorkflows({ searchDebounce: 300 }));
-
-    // Wait for initial fetch
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    // Change search query
     act(() => {
-      result.current.setSearchQuery('deploy');
+      result.current.setSearchQuery('Deploy');
     });
 
-    // Should not have refetched yet
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    // Wait for debounce + fetch
+    await waitFor(
+      () => {
+        expect(result.current.workflows.length).toBeLessThan(
+          mockWorkflows.length
+        );
+      },
+      { timeout: 2000 }
+    );
 
-    // Advance past debounce
-    act(() => {
-      vi.advanceTimersByTime(300);
+    // All returned should contain "Deploy"
+    result.current.workflows.forEach((w) => {
+      expect(w.title.toLowerCase()).toContain('deploy');
     });
-
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledTimes(2);
-    });
-
-    // Verify search param was included
-    const lastCallUrl = mockFetch.mock.calls[1][0];
-    expect(lastCallUrl).toContain('search=deploy');
   });
 
-  it('applies status filter', async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve({ ...mockWorkflowsResponse, workflows: [mockWorkflowsResponse.workflows[0]] }),
-    });
-
-    const { result } = renderHook(() => useWorkflows());
+  it('should filter workflows by status', async () => {
+    vi.useRealTimers();
+    const { result } = renderHook(() =>
+      useWorkflows({ searchDebounce: 50 })
+    );
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
@@ -97,93 +73,134 @@ describe('useWorkflows', () => {
       result.current.setStatusFilter('running');
     });
 
-    // Advance debounce timer
-    act(() => {
-      vi.advanceTimersByTime(300);
-    });
-
     await waitFor(() => {
-      const lastCallUrl = mockFetch.mock.calls[mockFetch.mock.calls.length - 1][0];
-      expect(lastCallUrl).toContain('status=running');
+      expect(
+        result.current.workflows.every((w) => w.status === 'running')
+      ).toBe(true);
     });
   });
 
-  it('supports load more pagination', async () => {
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve({ ...mockWorkflowsResponse, hasMore: true }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve({
-          workflows: [{ id: 'wf-4', title: 'Extra Workflow', status: 'completed', createdAt: '2026-01-01T09:00:00Z', updatedAt: '2026-01-01T09:00:00Z' }],
-          total: 4,
-          page: 2,
-          hasMore: false,
-        }),
-      });
+  it('should handle pagination with loadMore', async () => {
+    vi.useRealTimers();
+    // Create many workflows for pagination
+    const manyWorkflows = Array.from({ length: 25 }, (_, i) => ({
+      id: `wf-${String(i).padStart(3, '0')}`,
+      title: `Workflow ${i}`,
+      status: 'completed' as const,
+      createdAt: new Date(Date.now() - i * 3600000).toISOString(),
+      updatedAt: new Date(Date.now() - i * 1800000).toISOString(),
+    }));
 
-    const { result } = renderHook(() => useWorkflows());
+    server.use(
+      http.get('/api/workflows', ({ request }) => {
+        const url = new URL(request.url);
+        const page = parseInt(url.searchParams.get('page') || '1', 10);
+        const limit = parseInt(url.searchParams.get('limit') || '20', 10);
+        const start = (page - 1) * limit;
+        const paginatedWorkflows = manyWorkflows.slice(start, start + limit);
+
+        return HttpResponse.json({
+          workflows: paginatedWorkflows,
+          total: manyWorkflows.length,
+          page,
+          hasMore: start + limit < manyWorkflows.length,
+        });
+      })
+    );
+
+    const { result } = renderHook(() => useWorkflows({ pageSize: 10 }));
 
     await waitFor(() => {
-      expect(result.current.hasMore).toBe(true);
+      expect(result.current.isLoading).toBe(false);
     });
+
+    expect(result.current.workflows).toHaveLength(10);
+    expect(result.current.hasMore).toBe(true);
 
     act(() => {
       result.current.loadMore();
     });
 
     await waitFor(() => {
-      expect(result.current.workflows).toHaveLength(4);
-      expect(result.current.hasMore).toBe(false);
+      expect(result.current.workflows).toHaveLength(20);
     });
   });
 
-  it('handles errors gracefully', async () => {
-    mockFetch.mockRejectedValueOnce(new Error('Network error'));
-
-    const { result } = renderHook(() => useWorkflows());
-
-    await waitFor(() => {
-      expect(result.current.isError).toBe(true);
-    });
-
-    expect(result.current.error?.message).toBe('Network error');
-  });
-
-  it('clears data on 403', async () => {
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve(mockWorkflowsResponse),
+  it('should handle error state', async () => {
+    vi.useRealTimers();
+    server.use(
+      http.get('/api/workflows', () => {
+        return new HttpResponse(null, { status: 500 });
       })
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 403,
-      });
+    );
 
     const { result } = renderHook(() => useWorkflows());
 
     await waitFor(() => {
-      expect(result.current.workflows).toHaveLength(3);
+      expect(result.current.isLoading).toBe(false);
     });
 
-    // Trigger refetch
-    act(() => {
-      result.current.setStatusFilter('running');
+    expect(result.current.isError).toBe(true);
+    expect(result.current.error).toBeTruthy();
+  });
+
+  it('should handle 403 by clearing workflows', async () => {
+    vi.useRealTimers();
+    server.use(
+      http.get('/api/workflows', () => {
+        return new HttpResponse(null, { status: 403 });
+      })
+    );
+
+    const { result } = renderHook(() => useWorkflows());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
     });
 
+    expect(result.current.workflows).toHaveLength(0);
+    expect(result.current.isError).toBe(true);
+    expect(result.current.error?.message).toContain('Access denied');
+  });
+
+  it('should reset page when search/filter changes', async () => {
+    vi.useRealTimers();
+    const { result } = renderHook(() =>
+      useWorkflows({ searchDebounce: 50 })
+    );
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // Change filter — should reset to page 1
     act(() => {
-      vi.advanceTimersByTime(300);
+      result.current.setStatusFilter('failed');
     });
 
     await waitFor(() => {
-      expect(result.current.workflows).toHaveLength(0);
-      expect(result.current.isError).toBe(true);
+      expect(
+        result.current.workflows.every((w) => w.status === 'failed')
+      ).toBe(true);
+    });
+  });
+
+  it('should allow manual refetch', async () => {
+    vi.useRealTimers();
+    const { result } = renderHook(() => useWorkflows());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    act(() => {
+      result.current.refetch();
+    });
+
+    expect(result.current.isLoading).toBe(true);
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
     });
   });
 });

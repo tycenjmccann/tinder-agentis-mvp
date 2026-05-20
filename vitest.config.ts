@@ -17,8 +17,14 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      include: ['src/components/sidebar/**/*.{ts,tsx}'],
-      exclude: ['**/__tests__/**', '**/index.ts'],
+      include: ['src/components/sidebar/**'],
+      exclude: ['**/*.css', '**/*.test.*', '**/index.ts'],
+      thresholds: {
+        branches: 70,
+        functions: 75,
+        lines: 80,
+        statements: 80,
+      },
     },
   },
 });
