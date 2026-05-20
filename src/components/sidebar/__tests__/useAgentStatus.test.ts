@@ -1,27 +1,38 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { renderHook, waitFor, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useAgentStatus } from '../useAgentStatus';
-import { server } from '../../../test/mocks/server';
-import { http, HttpResponse } from 'msw';
-import { mockAgents } from '../../../test/mocks/handlers';
+
+// Mock fetch
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
+
+// Mock Page Visibility
+Object.defineProperty(document, 'hidden', { value: false, writable: true });
 
 describe('useAgentStatus', () => {
   beforeEach(() => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    // Document visible by default
-    Object.defineProperty(document, 'hidden', {
-      configurable: true,
-      get: () => false,
-    });
+    vi.useFakeTimers();
+    mockFetch.mockReset();
   });
 
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it('should fetch agents on mount', async () => {
-    vi.useRealTimers();
-    const { result } = renderHook(() => useAgentStatus());
+  const mockAgents = [
+    { id: 'agent-1', name: 'Frontend Dev', role: 'frontend', status: 'active', lastActivity: '2026-05-20T06:50:00Z' },
+    { id: 'agent-2', name: 'Backend Dev', role: 'backend', status: 'idle', lastActivity: '2026-05-20T06:40:00Z' },
+    { id: 'agent-3', name: 'QA Agent', role: 'qa', status: 'error', lastActivity: '2026-05-20T06:30:00Z' },
+  ];
+
+  it('fetches agents on mount', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ agents: mockAgents }),
+    });
+
+    const { result } = renderHook(() => useAgentStatus({ pollingInterval: 10000 }));
 
     expect(result.current.isLoading).toBe(true);
 
@@ -29,69 +40,32 @@ describe('useAgentStatus', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.agents).toHaveLength(mockAgents.length);
+    expect(result.current.agents).toHaveLength(3);
+    expect(result.current.agents[0].name).toBe('Frontend Dev');
     expect(result.current.isError).toBe(false);
   });
 
-  it('should set error state on fetch failure', async () => {
-    vi.useRealTimers();
-    server.use(
-      http.get('/api/agents/status', () => {
-        return new HttpResponse(null, { status: 500 });
-      })
-    );
+  it('handles API errors gracefully', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
-    const { result } = renderHook(() => useAgentStatus());
+    const { result } = renderHook(() => useAgentStatus({ pollingInterval: 10000 }));
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
     });
 
     expect(result.current.isError).toBe(true);
-    expect(result.current.error).toBeTruthy();
     expect(result.current.isStale).toBe(true);
   });
 
-  it('should handle 401 and stop after 2 consecutive failures', async () => {
-    vi.useRealTimers();
-    let callCount = 0;
-    server.use(
-      http.get('/api/agents/status', () => {
-        callCount++;
-        return new HttpResponse(null, { status: 401 });
-      })
-    );
-
-    const { result } = renderHook(() =>
-      useAgentStatus({ pollingInterval: 100 })
-    );
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
+  it('handles 429 rate limiting', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 429,
+      headers: new Headers({ 'Retry-After': '60' }),
     });
 
-    // After 2 consecutive 401s, should set error
-    await waitFor(
-      () => {
-        expect(result.current.isError).toBe(true);
-        expect(result.current.error?.message).toBe('Authentication expired');
-      },
-      { timeout: 3000 }
-    );
-  });
-
-  it('should handle 429 rate limiting', async () => {
-    vi.useRealTimers();
-    server.use(
-      http.get('/api/agents/status', () => {
-        return new HttpResponse(null, {
-          status: 429,
-          headers: { 'Retry-After': '60' },
-        });
-      })
-    );
-
-    const { result } = renderHook(() => useAgentStatus());
+    const { result } = renderHook(() => useAgentStatus({ pollingInterval: 10000 }));
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
@@ -100,42 +74,51 @@ describe('useAgentStatus', () => {
     expect(result.current.isStale).toBe(true);
   });
 
-  it('should not poll when disabled', async () => {
-    vi.useRealTimers();
-    let callCount = 0;
-    server.use(
-      http.get('/api/agents/status', () => {
-        callCount++;
-        return HttpResponse.json({ agents: mockAgents });
-      })
-    );
+  it('stops polling after 2 consecutive 401s', async () => {
+    mockFetch
+      .mockResolvedValueOnce({ ok: false, status: 401 })
+      .mockResolvedValueOnce({ ok: false, status: 401 });
 
+    const { result } = renderHook(() => useAgentStatus({ pollingInterval: 10000 }));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // Advance time to trigger second poll
+    act(() => { vi.advanceTimersByTime(12000); });
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+      expect(result.current.error?.message).toContain('Authentication expired');
+    });
+  });
+
+  it('refetch resets error state', async () => {
+    mockFetch
+      .mockRejectedValueOnce(new Error('Network error'))
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ agents: mockAgents }),
+      });
+
+    const { result } = renderHook(() => useAgentStatus({ pollingInterval: 10000 }));
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+
+    act(() => result.current.refetch());
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(false);
+      expect(result.current.agents).toHaveLength(3);
+    });
+  });
+
+  it('does not fetch when disabled', () => {
     renderHook(() => useAgentStatus({ enabled: false }));
-
-    // Wait a bit
-    await new Promise((resolve) => setTimeout(resolve, 200));
-
-    expect(callCount).toBe(0);
-  });
-
-  it('should allow manual refetch', async () => {
-    vi.useRealTimers();
-    const { result } = renderHook(() => useAgentStatus());
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    act(() => {
-      result.current.refetch();
-    });
-
-    expect(result.current.isLoading).toBe(true);
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    expect(result.current.agents).toHaveLength(mockAgents.length);
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 });

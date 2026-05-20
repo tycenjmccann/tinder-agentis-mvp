@@ -16,21 +16,35 @@ describe('WorkflowStatusFilter', () => {
 
   it('marks active filter as checked', () => {
     render(<WorkflowStatusFilter value="running" onChange={vi.fn()} />);
+
     expect(screen.getByRole('radio', { name: /running/i })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByRole('radio', { name: /all/i })).toHaveAttribute('aria-checked', 'false');
   });
 
   it('calls onChange when filter is clicked', async () => {
-    const user = userEvent.setup();
     const onChange = vi.fn();
     render(<WorkflowStatusFilter value="all" onChange={onChange} />);
 
-    await user.click(screen.getByRole('radio', { name: /failed/i }));
-    expect(onChange).toHaveBeenCalledWith('failed');
+    await userEvent.click(screen.getByRole('radio', { name: /running/i }));
+    expect(onChange).toHaveBeenCalledWith('running');
   });
 
-  it('has radiogroup role with label', () => {
+  it('has correct radiogroup role and label', () => {
     render(<WorkflowStatusFilter value="all" onChange={vi.fn()} />);
-    expect(screen.getByRole('radiogroup', { name: /filter by status/i })).toBeInTheDocument();
+
+    const group = screen.getByRole('radiogroup', { name: /filter by status/i });
+    expect(group).toBeInTheDocument();
+  });
+
+  it('supports keyboard navigation with arrow keys', async () => {
+    const onChange = vi.fn();
+    render(<WorkflowStatusFilter value="all" onChange={onChange} />);
+
+    const allChip = screen.getByRole('radio', { name: /all/i });
+    allChip.focus();
+
+    // ArrowRight should select next filter
+    await userEvent.keyboard('{ArrowRight}');
+    expect(onChange).toHaveBeenCalledWith('running');
   });
 });

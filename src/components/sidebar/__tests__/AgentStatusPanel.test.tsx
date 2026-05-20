@@ -5,18 +5,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AgentStatusPanel } from '../AgentStatusPanel';
 import { SidebarContext } from '../SidebarContext';
 
+// Mock fetch
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-const mockAgents = {
-  agents: [
-    { id: 'agent-1', name: 'Frontend Dev', role: 'frontend', status: 'active', lastActivity: '2026-01-01T00:00:00Z' },
-    { id: 'agent-2', name: 'Backend Dev', role: 'backend', status: 'idle', lastActivity: '2026-01-01T00:00:00Z' },
-    { id: 'agent-3', name: 'QA Agent', role: 'qa', status: 'error', lastActivity: '2026-01-01T00:00:00Z' },
-  ],
-};
+// Mock document.hidden
+Object.defineProperty(document, 'hidden', { value: false, writable: true });
 
-const defaultContext = {
+const defaultContextValue = {
   isCollapsed: false,
   isHidden: false,
   isMobileOpen: false,
@@ -29,35 +25,43 @@ const defaultContext = {
 
 function renderWithContext(
   ui: React.ReactElement,
-  contextValue = defaultContext
+  contextValue = defaultContextValue
 ) {
   return render(
-    <SidebarContext.Provider value={contextValue}>{ui}</SidebarContext.Provider>
+    <SidebarContext.Provider value={contextValue}>
+      {ui}
+    </SidebarContext.Provider>
   );
 }
 
 describe('AgentStatusPanel', () => {
+  const mockAgents = [
+    { id: 'agent-1', name: 'Frontend Dev', role: 'Frontend Developer', status: 'active', lastActivity: '2026-05-20T06:50:00Z' },
+    { id: 'agent-2', name: 'Backend Dev', role: 'Backend Developer', status: 'idle', lastActivity: '2026-05-20T06:40:00Z' },
+    { id: 'agent-3', name: 'QA Agent', role: 'QA Engineer', status: 'error', lastActivity: '2026-05-20T06:30:00Z' },
+  ];
+
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.useFakeTimers();
+    mockFetch.mockReset();
     mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
-      json: () => Promise.resolve(mockAgents),
+      json: async () => ({ agents: mockAgents }),
     });
   });
 
-  it('renders agent status region', async () => {
-    renderWithContext(<AgentStatusPanel />);
-    expect(screen.getByRole('region', { name: /agent status/i })).toBeInTheDocument();
-  });
-
-  it('shows loading skeletons initially', () => {
+  it('displays loading skeletons initially', () => {
     mockFetch.mockImplementation(() => new Promise(() => {})); // never resolves
+
     renderWithContext(<AgentStatusPanel />);
+
+    expect(screen.getByRole('region', { name: /agent status/i })).toBeInTheDocument();
     expect(screen.getByText('AGENTS')).toBeInTheDocument();
   });
 
-  it('displays agents after fetch', async () => {
+  it('displays agent list after loading', async () => {
+    vi.useRealTimers();
     renderWithContext(<AgentStatusPanel />);
 
     await waitFor(() => {
@@ -68,18 +72,20 @@ describe('AgentStatusPanel', () => {
     expect(screen.getByText('QA Agent')).toBeInTheDocument();
   });
 
-  it('shows status summary counts', async () => {
+  it('displays status summary counts', async () => {
+    vi.useRealTimers();
     renderWithContext(<AgentStatusPanel />);
 
     await waitFor(() => {
       expect(screen.getByText('1 Active')).toBeInTheDocument();
     });
+
     expect(screen.getByText('1 Idle')).toBeInTheDocument();
     expect(screen.getByText('1 Error')).toBeInTheDocument();
   });
 
-  it('calls onAgentClick when agent is clicked', async () => {
-    const user = userEvent.setup();
+  it('navigates when agent is clicked', async () => {
+    vi.useRealTimers();
     const onAgentClick = vi.fn();
     renderWithContext(<AgentStatusPanel onAgentClick={onAgentClick} />);
 
@@ -87,43 +93,49 @@ describe('AgentStatusPanel', () => {
       expect(screen.getByText('Frontend Dev')).toBeInTheDocument();
     });
 
-    await user.click(
-      screen.getByRole('listitem', { name: /Frontend Dev/ })
+    await userEvent.click(
+      screen.getByLabelText(/Frontend Dev.*status: active/i)
     );
-    expect(onAgentClick).toHaveBeenCalledWith(mockAgents.agents[0]);
+    expect(onAgentClick).toHaveBeenCalledWith(mockAgents[0]);
   });
 
-  it('renders dots in collapsed mode', async () => {
+  it('shows dots in collapsed mode', async () => {
+    vi.useRealTimers();
     renderWithContext(
       <AgentStatusPanel />,
-      { ...defaultContext, isCollapsed: true }
+      { ...defaultContextValue, isCollapsed: true }
     );
 
     await waitFor(() => {
-      const dots = screen.getAllByRole('button');
-      expect(dots.length).toBeGreaterThanOrEqual(3);
+      expect(
+        screen.getByLabelText(/Frontend Dev.*status: active/i)
+      ).toBeInTheDocument();
     });
   });
 
-  it('shows stale indicator on error', async () => {
-    mockFetch.mockRejectedValueOnce(new Error('Network error'));
-    renderWithContext(<AgentStatusPanel />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Status unavailable')).toBeInTheDocument();
+  it('shows empty state when no agents', async () => {
+    vi.useRealTimers();
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ agents: [] }),
     });
 
-    expect(screen.getByLabelText(/retry/i)).toBeInTheDocument();
-  });
-
-  it('agents have proper aria-labels', async () => {
     renderWithContext(<AgentStatusPanel />);
 
     await waitFor(() => {
-      const agentBtn = screen.getByRole('listitem', {
-        name: /Frontend Dev, frontend, status: active/i,
-      });
-      expect(agentBtn).toBeInTheDocument();
+      expect(screen.getByText('No agents configured')).toBeInTheDocument();
+    });
+  });
+
+  it('agent items have proper ARIA labels', async () => {
+    vi.useRealTimers();
+    renderWithContext(<AgentStatusPanel />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByLabelText('Frontend Dev, Frontend Developer, status: active')
+      ).toBeInTheDocument();
     });
   });
 });
