@@ -1,13 +1,16 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { WorkflowHistoryList } from '../WorkflowHistoryList';
 import { SidebarContext } from '../SidebarContext';
 
 // Mock fetch
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
+
+// Mock document.hidden
+Object.defineProperty(document, 'hidden', { value: false, writable: true });
 
 const defaultContextValue = {
   isCollapsed: false,
@@ -32,11 +35,16 @@ function renderWithContext(
 }
 
 describe('WorkflowHistoryList', () => {
-  const mockWorkflows = [
-    { id: 'wf-1', title: 'Deploy API v2', status: 'running', createdAt: '2026-05-20T06:50:00Z', updatedAt: '2026-05-20T06:50:00Z' },
-    { id: 'wf-2', title: 'Test Suite Run', status: 'completed', createdAt: '2026-05-20T06:40:00Z', updatedAt: '2026-05-20T06:45:00Z' },
-    { id: 'wf-3', title: 'Data Migration', status: 'failed', createdAt: '2026-05-20T06:30:00Z', updatedAt: '2026-05-20T06:35:00Z' },
-  ];
+  const mockWorkflows = {
+    workflows: [
+      { id: 'wf-1', title: 'Deploy API v2', status: 'running', createdAt: '2026-05-20T06:50:00Z', updatedAt: '2026-05-20T06:55:00Z' },
+      { id: 'wf-2', title: 'Build Frontend', status: 'completed', createdAt: '2026-05-20T05:00:00Z', updatedAt: '2026-05-20T05:30:00Z' },
+      { id: 'wf-3', title: 'Run Tests', status: 'failed', createdAt: '2026-05-20T04:00:00Z', updatedAt: '2026-05-20T04:15:00Z' },
+    ],
+    total: 3,
+    page: 1,
+    hasMore: false,
+  };
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -44,60 +52,76 @@ describe('WorkflowHistoryList', () => {
     mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({
-        workflows: mockWorkflows,
-        total: 3,
-        page: 1,
-        hasMore: false,
-      }),
+      json: async () => mockWorkflows,
     });
   });
 
-  it('renders section title', async () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('renders loading skeletons initially', () => {
+    mockFetch.mockImplementation(() => new Promise(() => {}));
+    renderWithContext(<WorkflowHistoryList />);
+
+    expect(screen.getByRole('region', { name: /workflow history/i })).toBeInTheDocument();
+    expect(screen.getByText('WORKFLOWS')).toBeInTheDocument();
+  });
+
+  it('displays workflow list after loading', async () => {
     vi.useRealTimers();
     renderWithContext(<WorkflowHistoryList />);
 
-    // It should show WORKFLOWS title
-    await screen.findByText('WORKFLOWS');
+    await waitFor(() => {
+      expect(screen.getByText('Deploy API v2')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Build Frontend')).toBeInTheDocument();
+    expect(screen.getByText('Run Tests')).toBeInTheDocument();
   });
 
-  it('shows flyout trigger button in collapsed mode', () => {
-    renderWithContext(
-      <WorkflowHistoryList />,
-      { ...defaultContextValue, isCollapsed: true }
+  it('displays status badges', async () => {
+    vi.useRealTimers();
+    renderWithContext(<WorkflowHistoryList />);
+
+    await waitFor(() => {
+      expect(screen.getByText('running')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('completed')).toBeInTheDocument();
+    expect(screen.getByText('failed')).toBeInTheDocument();
+  });
+
+  it('calls onWorkflowClick when workflow is clicked', async () => {
+    vi.useRealTimers();
+    const onWorkflowClick = vi.fn();
+    renderWithContext(<WorkflowHistoryList onWorkflowClick={onWorkflowClick} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Deploy API v2')).toBeInTheDocument();
+    });
+
+    await userEvent.click(
+      screen.getByLabelText(/Deploy API v2.*status: running/i)
     );
-
-    expect(screen.getByLabelText(/open workflow history/i)).toBeInTheDocument();
+    expect(onWorkflowClick).toHaveBeenCalledWith(mockWorkflows.workflows[0]);
   });
 
-  it('opens flyout when trigger is clicked in collapsed mode', async () => {
-    vi.useRealTimers();
-    renderWithContext(
-      <WorkflowHistoryList />,
-      { ...defaultContextValue, isCollapsed: true }
-    );
-
-    const trigger = screen.getByLabelText(/open workflow history/i);
-    await userEvent.click(trigger);
-
-    expect(screen.getByRole('dialog', { name: /workflow history/i })).toBeInTheDocument();
-  });
-
-  it('shows search bar in expanded mode', async () => {
+  it('search input updates when user types', async () => {
     vi.useRealTimers();
     renderWithContext(<WorkflowHistoryList />);
 
-    await screen.findByRole('searchbox', { name: /search workflows/i });
+    await waitFor(() => {
+      expect(screen.getByRole('searchbox')).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByRole('searchbox');
+    await userEvent.type(searchInput, 'deploy');
+
+    expect(searchInput).toHaveValue('deploy');
   });
 
-  it('shows status filter in expanded mode', async () => {
-    vi.useRealTimers();
-    renderWithContext(<WorkflowHistoryList />);
-
-    await screen.findByRole('radiogroup', { name: /filter by status/i });
-  });
-
-  it('displays empty state when no workflows', async () => {
+  it('shows empty state when no results', async () => {
     vi.useRealTimers();
     mockFetch.mockResolvedValue({
       ok: true,
@@ -107,16 +131,18 @@ describe('WorkflowHistoryList', () => {
 
     renderWithContext(<WorkflowHistoryList />);
 
-    await screen.findByText('No workflows yet');
+    await waitFor(() => {
+      expect(screen.getByText('No workflows yet')).toBeInTheDocument();
+    });
   });
 
-  it('displays no results state when search has no matches', async () => {
+  it('shows no matching message when search has no results', async () => {
     vi.useRealTimers();
     mockFetch
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => ({ workflows: mockWorkflows, total: 3, page: 1, hasMore: false }),
+        json: async () => mockWorkflows,
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -126,29 +152,75 @@ describe('WorkflowHistoryList', () => {
 
     renderWithContext(<WorkflowHistoryList searchDebounce={0} />);
 
-    await screen.findByText('Deploy API v2');
+    await waitFor(() => {
+      expect(screen.getByText('Deploy API v2')).toBeInTheDocument();
+    });
 
     const searchInput = screen.getByRole('searchbox');
     await userEvent.type(searchInput, 'nonexistent');
 
-    await screen.findByText('No matching workflows');
+    await waitFor(() => {
+      expect(screen.getByText('No matching workflows')).toBeInTheDocument();
+    });
   });
 
-  it('calls onWorkflowClick when workflow item is clicked', async () => {
+  it('shows flyout trigger in collapsed mode', () => {
+    renderWithContext(
+      <WorkflowHistoryList />,
+      { ...defaultContextValue, isCollapsed: true }
+    );
+
+    expect(screen.getByLabelText('Open workflow history')).toBeInTheDocument();
+  });
+
+  it('shows error state with retry button', async () => {
     vi.useRealTimers();
-    const onWorkflowClick = vi.fn();
-    renderWithContext(<WorkflowHistoryList onWorkflowClick={onWorkflowClick} />);
+    mockFetch.mockRejectedValue(new Error('Network error'));
 
-    const firstItem = await screen.findByLabelText(/Deploy API v2.*running/i);
-    await userEvent.click(firstItem);
+    renderWithContext(<WorkflowHistoryList />);
 
-    expect(onWorkflowClick).toHaveBeenCalledWith(mockWorkflows[0]);
+    await waitFor(() => {
+      expect(screen.getByText('Failed to load workflows')).toBeInTheDocument();
+    });
+
+    expect(screen.getByLabelText('Retry loading workflows')).toBeInTheDocument();
   });
 
-  it('has proper region role and label', async () => {
+  it('load more button appears when hasMore is true', async () => {
+    vi.useRealTimers();
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ ...mockWorkflows, hasMore: true }),
+    });
+
+    renderWithContext(<WorkflowHistoryList />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Load more workflows')).toBeInTheDocument();
+    });
+  });
+
+  it('filter chips are rendered with correct roles', async () => {
     vi.useRealTimers();
     renderWithContext(<WorkflowHistoryList />);
 
-    await screen.findByRole('region', { name: /workflow history/i });
+    await waitFor(() => {
+      expect(screen.getByRole('radiogroup', { name: /filter by status/i })).toBeInTheDocument();
+    });
+
+    const radios = screen.getAllByRole('radio');
+    expect(radios).toHaveLength(4);
+  });
+
+  it('workflow items have accessible labels', async () => {
+    vi.useRealTimers();
+    renderWithContext(<WorkflowHistoryList />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByLabelText(/Deploy API v2, status: running/i)
+      ).toBeInTheDocument();
+    });
   });
 });

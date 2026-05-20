@@ -24,7 +24,6 @@ export function QuickActions({ actions }: QuickActionsProps) {
 
         const button = (
           <button
-            key={action.id}
             className={`quick-action-btn ${
               action.variant === 'primary' ? 'quick-action-btn--primary' : ''
             }`}
@@ -48,7 +47,11 @@ export function QuickActions({ actions }: QuickActionsProps) {
           );
         }
 
-        return button;
+        return (
+          <React.Fragment key={action.id}>
+            {button}
+          </React.Fragment>
+        );
       })}
     </div>
   );
