@@ -1,0 +1,197 @@
+.workflow-list {
+  padding: var(--space-3) 0;
+}
+
+.workflow-list--collapsed {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-3);
+}
+
+.workflow-list__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.workflow-list__title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--color-text-muted);
+}
+
+.workflow-list__count {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.workflow-list__collapsed-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.workflow-list__collapsed-btn:hover {
+  background: var(--color-surface-3);
+  color: var(--color-text-primary);
+}
+
+.workflow-list__collapsed-btn:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+.workflow-list__items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 var(--space-2);
+  max-height: 400px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-surface-4) transparent;
+}
+
+.workflow-list__items::-webkit-scrollbar {
+  width: 4px;
+}
+
+.workflow-list__items::-webkit-scrollbar-thumb {
+  background: var(--color-surface-4);
+  border-radius: 2px;
+}
+
+.workflow-list__error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  font-size: 12px;
+  color: var(--color-status-error);
+  border-left: 2px solid var(--color-status-error);
+  margin: 0 var(--space-4) var(--space-2);
+}
+
+.workflow-list__retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: none;
+  border: none;
+  color: var(--color-brand-400);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.workflow-list__retry-btn:hover {
+  background: var(--color-surface-3);
+}
+
+.workflow-list__retry-btn:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+.workflow-list__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.workflow-list__empty-icon {
+  color: var(--color-text-muted);
+  opacity: 0.5;
+}
+
+.workflow-list__clear-btn {
+  background: none;
+  border: none;
+  color: var(--color-brand-400);
+  cursor: pointer;
+  font-size: 13px;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.workflow-list__clear-btn:hover {
+  background: var(--color-surface-3);
+}
+
+.workflow-list__clear-btn:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+.workflow-list__load-more {
+  padding: var(--space-2) var(--space-3);
+  text-align: center;
+}
+
+.workflow-list__load-more-btn {
+  background: none;
+  border: 1px solid var(--color-surface-4);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  width: 100%;
+  transition: background-color 150ms ease;
+}
+
+.workflow-list__load-more-btn:hover {
+  background: var(--color-surface-3);
+}
+
+.workflow-list__load-more-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.workflow-list__load-more-btn:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+/* Skeleton loading */
+.workflow-list__skeletons {
+  padding: 0 var(--space-2);
+}
+
+.workflow-item-skeleton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px var(--space-3);
+}
+
+.skeleton--title {
+  height: 14px;
+  width: 140px;
+}
+
+.skeleton--badge {
+  height: 18px;
+  width: 60px;
+  border-radius: var(--radius-sm);
+}
