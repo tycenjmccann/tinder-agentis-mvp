@@ -1,0 +1,53 @@
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  margin-left: var(--sidebar-width-expanded);
+  transition: margin-left var(--sidebar-transition-duration) var(--sidebar-transition-easing);
+  padding: var(--space-6);
+  background: var(--color-surface-1);
+}
+
+/* When sidebar is collapsed (applied via JS class on parent or CSS sibling) */
+.sidebar--collapsed ~ .main-content,
+.app-shell:has(.sidebar--collapsed) .main-content {
+  margin-left: var(--sidebar-width-collapsed);
+}
+
+/* Mobile: no margin */
+@media (max-width: 639px) {
+  .main-content {
+    margin-left: 0;
+  }
+}
+
+.main-content__placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.main-content__placeholder h1 {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-3);
+}
+
+.main-content__placeholder p {
+  font-size: 16px;
+  color: var(--color-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .main-content {
+    transition: none;
+  }
+}
