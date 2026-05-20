@@ -7,9 +7,12 @@ import './QuickActions.css';
 /**
  * QuickActions - Bottom-pinned action buttons.
  *
- * Expanded: icon + label buttons.
- * Collapsed: icon-only with tooltip.
- * Keyboard accessible with proper ARIA labels.
+ * Features:
+ * - Icon + label in expanded mode
+ * - Icon-only with tooltip in collapsed mode
+ * - Primary variant for primary CTA (New Workflow)
+ * - Accessible with aria-label
+ * - Keyboard navigable
  */
 export function QuickActions({ actions }: QuickActionsProps) {
   const { isCollapsed } = useSidebarContext();
@@ -18,6 +21,7 @@ export function QuickActions({ actions }: QuickActionsProps) {
     <div className="quick-actions" role="group" aria-label="Quick actions">
       {actions.map((action) => {
         const Icon = action.icon;
+
         const button = (
           <button
             key={action.id}
@@ -44,7 +48,7 @@ export function QuickActions({ actions }: QuickActionsProps) {
           );
         }
 
-        return <React.Fragment key={action.id}>{button}</React.Fragment>;
+        return button;
       })}
     </div>
   );

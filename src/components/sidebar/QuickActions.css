@@ -57,6 +57,7 @@
 
 .quick-action-btn__label {
   white-space: nowrap;
+  overflow: hidden;
 }
 
 /* Collapsed mode: center icon, hide label */
@@ -69,5 +70,11 @@
   opacity: 0;
   width: 0;
   overflow: hidden;
-  position: absolute;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quick-action-btn {
+    transition: none;
+  }
 }

@@ -15,20 +15,38 @@ const FILTER_OPTIONS: { value: FilterType; label: string }[] = [
 ];
 
 /**
- * WorkflowStatusFilter - Chip-style filter group.
- * Uses radiogroup pattern for accessibility.
+ * WorkflowStatusFilter - Chip-based status filter for workflow list.
+ *
+ * Features:
+ * - Radio group semantics
+ * - Keyboard navigable with arrow keys
+ * - Visual active state
  */
 export function WorkflowStatusFilter({
   value,
   onChange,
 }: WorkflowStatusFilterProps) {
+  const handleKeyDown = (e: React.KeyboardEvent, idx: number) => {
+    let nextIdx = idx;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      nextIdx = (idx + 1) % FILTER_OPTIONS.length;
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      nextIdx = (idx - 1 + FILTER_OPTIONS.length) % FILTER_OPTIONS.length;
+    }
+    if (nextIdx !== idx) {
+      onChange(FILTER_OPTIONS[nextIdx].value);
+    }
+  };
+
   return (
     <div
       className="workflow-filter"
       role="radiogroup"
       aria-label="Filter by status"
     >
-      {FILTER_OPTIONS.map((option) => (
+      {FILTER_OPTIONS.map((option, idx) => (
         <button
           key={option.value}
           className={`workflow-filter__chip ${
@@ -36,7 +54,9 @@ export function WorkflowStatusFilter({
           }`}
           role="radio"
           aria-checked={value === option.value}
+          tabIndex={value === option.value ? 0 : -1}
           onClick={() => onChange(option.value)}
+          onKeyDown={(e) => handleKeyDown(e, idx)}
           type="button"
         >
           {option.label}

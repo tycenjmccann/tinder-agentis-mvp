@@ -1,55 +1,62 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import { X } from 'lucide-react';
 import { WorkflowSearchBar } from './WorkflowSearchBar';
 import { WorkflowStatusFilter } from './WorkflowStatusFilter';
 import { WorkflowHistoryItem } from './WorkflowHistoryItem';
-import type { WorkflowSummary, WorkflowStatusFilter as FilterType } from './sidebar.types';
+import { useWorkflows } from './useWorkflows';
+import type { WorkflowSummary } from './sidebar.types';
 import './WorkflowFlyout.css';
 
 interface WorkflowFlyoutProps {
-  workflows: WorkflowSummary[];
-  isLoading: boolean;
-  isLoadingMore: boolean;
-  hasMore: boolean;
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
-  statusFilter: FilterType;
-  onStatusFilterChange: (filter: FilterType) => void;
-  onWorkflowClick?: (workflow: WorkflowSummary) => void;
-  onLoadMore: () => void;
+  isOpen: boolean;
   onClose: () => void;
+  onWorkflowClick?: (workflow: WorkflowSummary) => void;
 }
 
 /**
- * WorkflowFlyout - Panel displayed when sidebar is collapsed.
+ * WorkflowFlyout - Flyout panel for workflow history in collapsed mode.
  *
- * Opens as a fixed panel to the right of the collapsed sidebar.
- * Focus management: focus moves to close button on open,
- * returns to trigger on close.
+ * Opens from the side of the collapsed sidebar.
+ * Contains full search, filter, and workflow list.
+ * Focus management: focus moves to close button on open.
  */
 export function WorkflowFlyout({
-  workflows,
-  isLoading,
-  isLoadingMore,
-  hasMore,
-  searchQuery,
-  onSearchChange,
-  statusFilter,
-  onStatusFilterChange,
-  onWorkflowClick,
-  onLoadMore,
+  isOpen,
   onClose,
+  onWorkflowClick,
 }: WorkflowFlyoutProps) {
-  const closeRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
 
-  // Focus close button on mount
+  const {
+    workflows,
+    isLoading,
+    isLoadingMore,
+    isError,
+    hasMore,
+    searchQuery,
+    setSearchQuery,
+    statusFilter,
+    setStatusFilter,
+    loadMore,
+    refetch,
+  } = useWorkflows();
+
+  // Focus management
   useEffect(() => {
-    closeRef.current?.focus();
-  }, []);
+    if (isOpen) {
+      triggerRef.current = document.activeElement as HTMLElement;
+      // Delay to allow transition
+      setTimeout(() => closeButtonRef.current?.focus(), 100);
+    } else if (triggerRef.current) {
+      triggerRef.current.focus();
+      triggerRef.current = null;
+    }
+  }, [isOpen]);
 
   // Close on Escape
   useEffect(() => {
+    if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
@@ -57,85 +64,92 @@ export function WorkflowFlyout({
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [isOpen, onClose]);
 
-  // Close on click outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        onClose();
+  // Infinite scroll handler
+  const handleScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      const target = e.target as HTMLDivElement;
+      const nearBottom =
+        target.scrollHeight - target.scrollTop - target.clientHeight < 100;
+      if (nearBottom && hasMore && !isLoadingMore) {
+        loadMore();
       }
-    };
-    // Delay adding listener to prevent immediate close
-    const timer = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside);
-    }, 0);
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [onClose]);
+    },
+    [hasMore, isLoadingMore, loadMore]
+  );
 
   return (
     <div
-      ref={panelRef}
-      className="workflow-flyout workflow-flyout--open"
+      className={`workflow-flyout ${isOpen ? 'workflow-flyout--open' : ''}`}
       role="dialog"
       aria-label="Workflow history"
       aria-modal="false"
+      aria-hidden={!isOpen}
     >
       {/* Header */}
       <div className="workflow-flyout__header">
-        <h2 className="workflow-flyout__title">Workflow History</h2>
+        <h2 className="workflow-flyout__title">Workflows</h2>
         <button
-          ref={closeRef}
+          ref={closeButtonRef}
           className="workflow-flyout__close"
           onClick={onClose}
           aria-label="Close workflow history panel"
           type="button"
+          tabIndex={isOpen ? 0 : -1}
         >
           <X size={16} aria-hidden="true" />
         </button>
       </div>
 
-      {/* Search */}
-      <WorkflowSearchBar value={searchQuery} onChange={onSearchChange} />
+      {/* Search & Filter */}
+      <WorkflowSearchBar value={searchQuery} onChange={setSearchQuery} />
+      <WorkflowStatusFilter value={statusFilter} onChange={setStatusFilter} />
 
-      {/* Filter */}
-      <WorkflowStatusFilter value={statusFilter} onChange={onStatusFilterChange} />
-
-      {/* List */}
-      <div className="workflow-flyout__list">
-        {isLoading && workflows.length === 0 && (
-          <div className="workflow-flyout__loading">Loading...</div>
-        )}
-
-        {!isLoading && workflows.length === 0 && (
-          <div className="workflow-flyout__empty">
-            {searchQuery ? 'No matching workflows' : 'No workflows yet'}
+      {/* Workflow List */}
+      <div
+        className="workflow-flyout__list"
+        onScroll={handleScroll}
+        role="list"
+        aria-label="Workflow list"
+      >
+        {isLoading && workflows.length === 0 ? (
+          <div className="workflow-flyout__loading">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="workflow-item-skeleton">
+                <div className="skeleton skeleton--text-lg" />
+                <div className="skeleton skeleton--text-sm" />
+              </div>
+            ))}
           </div>
-        )}
-
-        {workflows.map((workflow) => (
-          <WorkflowHistoryItem
-            key={workflow.id}
-            workflow={workflow}
-            onClick={() => {
-              onWorkflowClick?.(workflow);
-              onClose();
-            }}
-          />
-        ))}
-
-        {hasMore && (
-          <button
-            className="workflow-flyout__load-more"
-            onClick={onLoadMore}
-            disabled={isLoadingMore}
-            type="button"
-          >
-            {isLoadingMore ? 'Loading...' : 'Load more'}
-          </button>
+        ) : isError && workflows.length === 0 ? (
+          <div className="workflow-flyout__error">
+            <p>Failed to load workflows</p>
+            <button onClick={refetch} type="button">Retry</button>
+          </div>
+        ) : workflows.length === 0 ? (
+          <div className="workflow-flyout__empty">
+            {searchQuery || statusFilter !== 'all' ? (
+              <p>No matching workflows</p>
+            ) : (
+              <p>No workflows yet</p>
+            )}
+          </div>
+        ) : (
+          <>
+            {workflows.map((workflow) => (
+              <WorkflowHistoryItem
+                key={workflow.id}
+                workflow={workflow}
+                onClick={() => onWorkflowClick?.(workflow)}
+              />
+            ))}
+            {isLoadingMore && (
+              <div className="workflow-flyout__loading-more">
+                Loading more...
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

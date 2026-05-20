@@ -1,17 +1,29 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Search, X } from 'lucide-react';
 import './WorkflowSearchBar.css';
 
 interface WorkflowSearchBarProps {
   value: string;
   onChange: (value: string) => void;
+  placeholder?: string;
 }
 
 /**
- * WorkflowSearchBar - Search input with icon and clear button.
- * Accessible with proper roles and labels.
+ * WorkflowSearchBar - Debounced search input for filtering workflows.
+ *
+ * Features:
+ * - Search icon
+ * - Clear button when value present
+ * - Accessible with proper ARIA
+ * - No dangerouslySetInnerHTML (XSS-1)
  */
-export function WorkflowSearchBar({ value, onChange }: WorkflowSearchBarProps) {
+export function WorkflowSearchBar({
+  value,
+  onChange,
+  placeholder = 'Search workflows...',
+}: WorkflowSearchBarProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
   return (
     <div className="workflow-search">
       <Search
@@ -20,18 +32,23 @@ export function WorkflowSearchBar({ value, onChange }: WorkflowSearchBarProps) {
         aria-hidden="true"
       />
       <input
-        className="workflow-search__input"
+        ref={inputRef}
         type="search"
-        role="searchbox"
-        aria-label="Search workflows"
-        placeholder="Search workflows..."
+        className="workflow-search__input"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        aria-label="Search workflows"
+        role="searchbox"
+        autoComplete="off"
       />
       {value && (
         <button
           className="workflow-search__clear"
-          onClick={() => onChange('')}
+          onClick={() => {
+            onChange('');
+            inputRef.current?.focus();
+          }}
           aria-label="Clear search"
           type="button"
         >

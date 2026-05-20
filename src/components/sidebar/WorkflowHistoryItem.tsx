@@ -9,61 +9,62 @@ interface WorkflowHistoryItemProps {
 }
 
 /**
- * WorkflowHistoryItem - Individual workflow entry.
+ * WorkflowHistoryItem - Individual workflow entry in the history list.
  *
- * Shows title, status badge, and relative timestamp.
- * Memoized for virtualized list performance.
+ * Features:
+ * - Title with text-overflow ellipsis
+ * - Status badge with color coding
+ * - Relative timestamp
+ * - Memoized for virtualized list performance
+ * - Accessible with aria-label (XSS-safe: text only)
  */
 export const WorkflowHistoryItem = memo(function WorkflowHistoryItem({
   workflow,
   onClick,
   style,
 }: WorkflowHistoryItemProps) {
-  const formattedTime = formatRelativeTime(workflow.createdAt);
+  const timeAgo = getRelativeTime(workflow.createdAt);
 
   return (
     <button
       className="workflow-item"
       role="listitem"
       onClick={onClick}
-      aria-label={`${workflow.title}, status: ${workflow.status}, created ${formattedTime}`}
+      aria-label={`${workflow.title}, status: ${workflow.status}, ${timeAgo}`}
       type="button"
       style={style}
     >
       <div className="workflow-item__content">
         <span className="workflow-item__title">{workflow.title}</span>
-        <span className="workflow-item__timestamp">{formattedTime}</span>
+        <span className="workflow-item__timestamp">{timeAgo}</span>
       </div>
-      <span
-        className={`workflow-item__badge workflow-item__badge--${workflow.status}`}
-      >
+      <span className={`workflow-item__badge workflow-item__badge--${workflow.status}`}>
         {workflow.status}
       </span>
     </button>
   );
 });
 
-/**
- * Format ISO timestamp to relative time string.
- * Uses safe text output only (no HTML injection possible).
- */
-function formatRelativeTime(isoDate: string): string {
+/** Utility to calculate relative time string */
+function getRelativeTime(dateString: string): string {
   try {
-    const date = new Date(isoDate);
+    const date = new Date(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
-    const diffMinutes = Math.floor(diffMs / 60000);
-
-    if (diffMinutes < 1) return 'Just now';
-    if (diffMinutes < 60) return `${diffMinutes}m ago`;
-
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
     const diffHours = Math.floor(diffMinutes / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
-
     const diffDays = Math.floor(diffHours / 24);
+
+    if (diffSeconds < 60) return 'Just now';
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
 
-    return date.toLocaleDateString();
+    return date.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+    });
   } catch {
     return 'Unknown';
   }

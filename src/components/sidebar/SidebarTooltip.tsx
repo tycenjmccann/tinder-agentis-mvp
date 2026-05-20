@@ -1,35 +1,42 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useId } from 'react';
+import { useSidebarContext } from './SidebarContext';
 import './SidebarTooltip.css';
 
 interface SidebarTooltipProps {
   content: string;
   children: React.ReactElement;
+  /** Force show tooltip regardless of sidebar state */
+  forceShow?: boolean;
 }
 
 /**
- * SidebarTooltip - Tooltip displayed on hover/focus for collapsed sidebar items.
+ * SidebarTooltip - Shows tooltip on hover in collapsed sidebar mode.
  *
- * Positioned to the right of the sidebar.
- * Uses role="tooltip" with aria-describedby for accessibility.
- * Content is always rendered as text (XSS-safe).
+ * Only appears when sidebar is collapsed (unless forceShow).
+ * Uses text content only (no innerHTML) for XSS safety.
+ * Connected via aria-describedby for screen readers.
  */
-export function SidebarTooltip({ content, children }: SidebarTooltipProps) {
+export function SidebarTooltip({
+  content,
+  children,
+  forceShow = false,
+}: SidebarTooltipProps) {
+  const { isCollapsed } = useSidebarContext();
   const [isVisible, setIsVisible] = useState(false);
-  const tooltipId = useRef(
-    `tooltip-${Math.random().toString(36).slice(2, 9)}`
-  ).current;
+  const tooltipId = useId();
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showTooltip = useCallback(() => {
-    timeoutRef.current = setTimeout(() => setIsVisible(true), 200);
-  }, []);
+    if (!isCollapsed && !forceShow) return;
+    timeoutRef.current = setTimeout(() => setIsVisible(true), 100);
+  }, [isCollapsed, forceShow]);
 
   const hideTooltip = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setIsVisible(false);
   }, []);
+
+  const shouldRender = (isCollapsed || forceShow) && isVisible;
 
   return (
     <div
@@ -40,18 +47,17 @@ export function SidebarTooltip({ content, children }: SidebarTooltipProps) {
       onBlur={hideTooltip}
     >
       {React.cloneElement(children, {
-        'aria-describedby': isVisible ? tooltipId : undefined,
+        'aria-describedby': isCollapsed || forceShow ? tooltipId : undefined,
       })}
-      <div
-        id={tooltipId}
-        className={`sidebar-tooltip ${
-          isVisible ? 'sidebar-tooltip--visible' : ''
-        }`}
-        role="tooltip"
-        aria-hidden={!isVisible}
-      >
-        {content}
-      </div>
+      {shouldRender && (
+        <div
+          id={tooltipId}
+          role="tooltip"
+          className={`sidebar-tooltip ${shouldRender ? 'sidebar-tooltip--visible' : ''}`}
+        >
+          {content}
+        </div>
+      )}
     </div>
   );
 }
