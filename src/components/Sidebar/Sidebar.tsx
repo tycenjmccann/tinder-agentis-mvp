@@ -4,6 +4,7 @@ import { AgentStatusList } from './AgentStatusList'
 import { WorkflowProgress } from './WorkflowProgress'
 import { TicketLinks } from './TicketLinks'
 import './Sidebar.css'
+import './Sidebar.styles.css'
 
 export function Sidebar() {
   const { isOpen, setIsOpen } = useSidebarContext()
