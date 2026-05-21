@@ -1,0 +1,130 @@
+.agent-status-panel {
+  padding: var(--space-3) var(--space-3);
+}
+
+.agent-status-panel--error {
+  padding: var(--space-4);
+}
+
+.agent-status-panel__error {
+  color: var(--color-status-error);
+  font-size: 12px;
+}
+
+.agent-status-panel__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: default;
+}
+
+.agent-status-panel__icon {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.agent-status-panel__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex: 1;
+}
+
+.agent-status-panel__toggle {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+}
+
+.agent-status-panel__toggle:hover {
+  color: var(--color-text-primary);
+}
+
+.agent-status-panel__list {
+  margin-top: var(--space-1);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.agent-status-panel__loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+}
+
+.agent-status-panel__skeleton {
+  height: 32px;
+  background: var(--color-surface-3);
+  border-radius: var(--radius-md);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Collapsed mode */
+.agent-status-panel__collapsed-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+}
+
+.agent-status-panel__collapsed-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.agent-status-panel__collapsed-item:hover {
+  background: var(--color-surface-3);
+}
+
+.agent-status-panel__collapsed-item:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+.agent-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: block;
+}
+
+.agent-status-dot--active {
+  background: var(--color-status-running);
+}
+
+.agent-status-dot--idle {
+  background: var(--color-status-stopped);
+}
+
+.agent-status-dot--error {
+  background: var(--color-status-error);
+}
+
+/* Collapsed header centering */
+.sidebar--collapsed .agent-status-panel__header {
+  justify-content: center;
+  padding: var(--space-2);
+}

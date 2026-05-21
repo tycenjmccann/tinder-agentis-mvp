@@ -1,5 +1,4 @@
-/// <reference types="vitest" />
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
@@ -17,8 +16,7 @@ export default defineConfig({
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     coverage: {
       reporter: ['text', 'lcov'],
-      include: ['src/components/sidebar/**/*.{ts,tsx}'],
-      exclude: ['**/__tests__/**', '**/*.test.*', '**/index.ts'],
+      exclude: ['node_modules/', 'src/test/'],
     },
   },
 });

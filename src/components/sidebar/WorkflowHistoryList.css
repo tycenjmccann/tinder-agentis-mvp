@@ -1,0 +1,68 @@
+.workflow-history {
+  padding: var(--space-3);
+}
+
+.workflow-history--error {
+  padding: var(--space-4);
+}
+
+.workflow-history__error {
+  color: var(--color-status-error);
+  font-size: 12px;
+}
+
+.workflow-history__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: default;
+}
+
+.workflow-history__icon {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.workflow-history__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.workflow-history__list {
+  margin-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.workflow-history__loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+}
+
+.workflow-history__skeleton {
+  height: 48px;
+  background: var(--color-surface-3);
+  border-radius: var(--radius-md);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.workflow-history__empty {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: var(--space-4);
+}
+
+/* Collapsed mode header centering */
+.sidebar--collapsed .workflow-history__header {
+  justify-content: center;
+  padding: var(--space-2);
+}

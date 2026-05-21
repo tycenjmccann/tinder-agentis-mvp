@@ -5,13 +5,13 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Agentis Hub</title>
-    <!-- Prevent layout flash: apply sidebar collapsed state before paint -->
+    <!-- Prevent layout flash: read sidebar state from localStorage synchronously -->
     <script>
       (function() {
         try {
           var collapsed = localStorage.getItem('sidebar-collapsed');
           if (collapsed === 'true') {
-            document.documentElement.classList.add('sidebar-is-collapsed');
+            document.documentElement.classList.add('sidebar-initially-collapsed');
           }
         } catch(e) {}
       })();

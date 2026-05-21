@@ -7,18 +7,19 @@
   flex: 1;
   margin-left: var(--sidebar-width-expanded);
   transition: margin-left var(--sidebar-transition-duration) var(--sidebar-transition-easing);
-  min-width: 0;
+  min-width: 0; /* Prevent flex overflow */
   padding: var(--space-6);
 }
 
-/* When sidebar is collapsed, reduce main content margin */
+/* When sidebar is collapsed */
 .sidebar--collapsed ~ .app-shell__main,
 .app-shell:has(.sidebar--collapsed) .app-shell__main {
   margin-left: var(--sidebar-width-collapsed);
 }
 
-/* Flash prevention: apply correct margin before React hydrates */
-.sidebar-is-collapsed .app-shell__main {
+/* Flash prevention: initial state from inline script */
+.sidebar-initially-collapsed ~ .app-shell__main,
+.app-shell:has(.sidebar-initially-collapsed) .app-shell__main {
   margin-left: var(--sidebar-width-collapsed);
 }
 

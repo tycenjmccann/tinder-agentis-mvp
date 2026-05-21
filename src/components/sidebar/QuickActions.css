@@ -1,0 +1,80 @@
+.quick-actions {
+  margin-top: auto;
+  padding: var(--space-3);
+  border-top: 1px solid var(--color-surface-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.quick-action-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: var(--font-family);
+  cursor: pointer;
+  transition: all 150ms ease;
+  width: 100%;
+  text-align: left;
+}
+
+.quick-action-btn:hover {
+  background: var(--color-surface-3);
+  color: var(--color-text-primary);
+}
+
+.quick-action-btn:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+.quick-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.quick-action-btn--primary {
+  background: var(--color-brand-600);
+  color: white;
+}
+
+.quick-action-btn--primary:hover {
+  background: var(--color-brand-500);
+  color: white;
+}
+
+.quick-action-btn__icon {
+  flex-shrink: 0;
+}
+
+.quick-action-btn__label {
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* Collapsed mode: center icon, hide label */
+.sidebar--collapsed .quick-action-btn {
+  justify-content: center;
+  padding: 10px;
+}
+
+.sidebar--collapsed .quick-action-btn__label {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quick-action-btn {
+    transition: none;
+  }
+}

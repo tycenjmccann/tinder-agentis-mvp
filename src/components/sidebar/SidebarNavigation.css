@@ -1,0 +1,101 @@
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-width-expanded); /* w-64 = 256px */
+  background: var(--color-surface-1);
+  border-right: 1px solid var(--color-surface-4);
+  display: flex;
+  flex-direction: column;
+  z-index: 40;
+  transition: width var(--sidebar-transition-duration) var(--sidebar-transition-easing);
+  will-change: width;
+  overflow: hidden;
+}
+
+.sidebar--collapsed {
+  width: var(--sidebar-width-collapsed); /* w-16 = 64px */
+}
+
+/* Flash prevention: initial collapsed state before React mounts */
+.sidebar-initially-collapsed .sidebar {
+  width: var(--sidebar-width-collapsed);
+}
+
+.sidebar--hidden {
+  transform: translateX(-100%);
+  width: var(--sidebar-width-expanded);
+  z-index: 100;
+  transition: transform var(--sidebar-transition-duration) var(--sidebar-transition-easing);
+}
+
+.sidebar--mobile-open {
+  transform: translateX(0);
+}
+
+.sidebar__content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-surface-4) transparent;
+}
+
+.sidebar__content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar__content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar__content::-webkit-scrollbar-thumb {
+  background: var(--color-surface-4);
+  border-radius: 2px;
+}
+
+.sidebar__divider {
+  height: 1px;
+  background: var(--color-surface-4);
+  margin: var(--space-2) var(--space-4);
+}
+
+/* Backdrop for mobile */
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 99;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+
+.sidebar-backdrop--visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Label fade animation */
+.sidebar__content-label {
+  white-space: nowrap;
+  opacity: 1;
+  transition: opacity 150ms ease 50ms;
+}
+
+.sidebar--collapsed .sidebar__content-label {
+  opacity: 0;
+  transition-delay: 0ms;
+  pointer-events: none;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .sidebar--hidden,
+  .sidebar-backdrop,
+  .sidebar__content-label {
+    transition: none;
+  }
+}
