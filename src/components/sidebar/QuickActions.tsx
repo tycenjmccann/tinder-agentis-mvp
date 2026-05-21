@@ -1,0 +1,50 @@
+import React from 'react';
+import { useSidebarContext } from './SidebarContext';
+import type { QuickActionsProps } from './sidebar.types';
+import './QuickActions.css';
+
+/**
+ * QuickActions - Bottom-pinned action buttons.
+ *
+ * Features:
+ * - Icon + label in expanded mode
+ * - Icon-only with CSS tooltip in collapsed mode
+ * - Primary variant for primary CTA (New Workflow)
+ * - Accessible with aria-label
+ * - Keyboard navigable
+ * - CSS-only tooltips (no JS tooltip library)
+ */
+export function QuickActions({ actions }: QuickActionsProps) {
+  const { isCollapsed } = useSidebarContext();
+
+  return (
+    <div className="quick-actions" role="group" aria-label="Quick actions">
+      {actions.map((action) => {
+        const Icon = action.icon;
+
+        return (
+          <div
+            key={action.id}
+            className="sidebar-nav-item"
+            data-tooltip={action.label}
+          >
+            <button
+              className={`quick-action-btn ${
+                action.variant === 'primary' ? 'quick-action-btn--primary' : ''
+              }`}
+              onClick={action.onClick}
+              disabled={action.disabled}
+              aria-label={action.label}
+              type="button"
+            >
+              <Icon size={20} aria-hidden="true" className="quick-action-btn__icon" />
+              <span className="quick-action-btn__label sidebar__content-label">
+                {action.label}
+              </span>
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}

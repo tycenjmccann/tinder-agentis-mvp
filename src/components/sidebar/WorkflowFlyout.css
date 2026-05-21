@@ -1,0 +1,86 @@
+.workflow-flyout {
+  position: fixed;
+  top: 0;
+  left: var(--sidebar-width-expanded);
+  bottom: 0;
+  width: 320px;
+  background: var(--color-surface-2);
+  border-right: 1px solid var(--color-surface-4);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  animation: flyout-enter 200ms ease;
+}
+
+@keyframes flyout-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.workflow-flyout__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-surface-4);
+}
+
+.workflow-flyout__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.workflow-flyout__close {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+}
+
+.workflow-flyout__close:hover {
+  color: var(--color-text-primary);
+  background: var(--color-surface-3);
+}
+
+.workflow-flyout__body {
+  padding: var(--space-4);
+  flex: 1;
+  overflow-y: auto;
+}
+
+.workflow-flyout__details {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-2) var(--space-4);
+  font-size: 13px;
+}
+
+.workflow-flyout__details dt {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.workflow-flyout__details dd {
+  color: var(--color-text-secondary);
+}
+
+.workflow-flyout__status--running {
+  color: var(--color-status-running);
+}
+
+.workflow-flyout__status--completed {
+  color: var(--color-brand-500);
+}
+
+.workflow-flyout__status--failed {
+  color: var(--color-status-error);
+}

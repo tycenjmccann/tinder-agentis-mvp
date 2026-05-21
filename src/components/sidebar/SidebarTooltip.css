@@ -1,0 +1,53 @@
+/*
+ * CSS-Only Tooltips for Sidebar Navigation Items
+ *
+ * Tooltips appear on hover when the sidebar is collapsed (via .sidebar--collapsed parent).
+ * Uses the data-tooltip attribute on .sidebar-nav-item elements.
+ * Pure CSS implementation — no JavaScript tooltip library required.
+ *
+ * AC-8: CSS tooltip appears on hover in collapsed mode
+ * AC-9: Tooltip does NOT appear in expanded mode
+ */
+
+/* Navigation item wrapper - provides positioning context for tooltip */
+.sidebar-nav-item {
+  position: relative;
+}
+
+/* Tooltip pseudo-element: hidden by default */
+.sidebar-nav-item::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 6px 12px;
+  background: var(--color-surface-3);
+  border: 1px solid var(--color-surface-4);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 60;
+  transition: opacity 150ms ease;
+  /* ~200ms appear delay for UX polish */
+  transition-delay: 0ms;
+}
+
+/* Show tooltip ONLY when sidebar is collapsed AND item is hovered */
+.sidebar--collapsed .sidebar-nav-item:hover::after {
+  opacity: 1;
+  transition-delay: 200ms;
+}
+
+/* Tooltip does NOT show when sidebar is expanded (default state - no rule needed) */
+
+/* Reduced motion: no transitions */
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-nav-item::after {
+    transition: none;
+  }
+}
