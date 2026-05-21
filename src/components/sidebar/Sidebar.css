@@ -1,0 +1,234 @@
+/* ========================================
+ * Sidebar - Collapsible Navigation
+ * ======================================== */
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-width-expanded); /* w-64: 256px */
+  background: var(--color-surface-2);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  z-index: 40;
+  transition: width var(--sidebar-transition-duration) var(--sidebar-transition-easing);
+  overflow: hidden;
+}
+
+.sidebar--collapsed {
+  width: var(--sidebar-width-collapsed); /* w-16: 64px */
+}
+
+/* ---- Header ---- */
+.sidebar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+  height: 56px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  overflow: hidden;
+  min-width: 0;
+}
+
+.sidebar__brand-icon {
+  color: var(--color-brand-500);
+  flex-shrink: 0;
+}
+
+.sidebar__brand-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  opacity: 1;
+  transition: opacity 200ms ease 100ms;
+}
+
+.sidebar--collapsed .sidebar__brand-text {
+  opacity: 0;
+  pointer-events: none;
+  transition-delay: 0ms;
+}
+
+/* ---- Toggle Button ---- */
+.sidebar__toggle {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-muted);
+  border: none;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+  flex-shrink: 0;
+}
+
+.sidebar__toggle:hover {
+  background: var(--color-surface-3);
+  color: var(--color-text-primary);
+}
+
+.sidebar__toggle:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+/* In collapsed state, center the toggle */
+.sidebar--collapsed .sidebar__header {
+  justify-content: center;
+  padding: var(--space-3) var(--space-2);
+}
+
+.sidebar--collapsed .sidebar__brand {
+  display: none;
+}
+
+/* ---- Navigation ---- */
+.sidebar__nav {
+  flex: 1;
+  padding: var(--space-3) var(--space-2);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar__nav-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.sidebar__nav-item {
+  position: relative;
+}
+
+.sidebar__nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-3);
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 14px;
+  font-family: inherit;
+  text-align: left;
+  transition: background-color 150ms ease, color 150ms ease;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar__nav-link:hover {
+  background: var(--color-surface-3);
+  color: var(--color-text-primary);
+}
+
+.sidebar__nav-link:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+.sidebar__nav-icon {
+  flex-shrink: 0;
+}
+
+.sidebar__nav-label {
+  opacity: 1;
+  transition: opacity 200ms ease 100ms;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar--collapsed .sidebar__nav-label {
+  opacity: 0;
+  width: 0;
+  pointer-events: none;
+  transition-delay: 0ms;
+}
+
+.sidebar--collapsed .sidebar__nav-link {
+  justify-content: center;
+  padding: var(--space-3);
+}
+
+/* ========================================
+ * CSS-Only Tooltips (collapsed mode only)
+ * ======================================== */
+
+/* Tooltip via ::after pseudo-element on nav items */
+.sidebar--collapsed .sidebar__nav-item::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 8px;
+  padding: 6px 12px;
+  background: var(--color-surface-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 60;
+  transition: opacity 150ms ease;
+  transition-delay: 0ms;
+}
+
+.sidebar--collapsed .sidebar__nav-item:hover::after {
+  opacity: 1;
+  transition-delay: 200ms; /* Brief delay for UX polish */
+}
+
+/* Use data-tooltip attribute on the nav-link, read by parent li */
+.sidebar--collapsed .sidebar__nav-item {
+  position: relative;
+}
+
+/* Tooltip must NOT appear in expanded mode (default: no ::after rendered) */
+.sidebar--expanded .sidebar__nav-item::after {
+  content: none;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 639px) {
+  .sidebar {
+    transform: translateX(-100%);
+    width: var(--sidebar-width-expanded);
+    z-index: 100;
+    transition: transform var(--sidebar-transition-duration) var(--sidebar-transition-easing);
+  }
+
+  .sidebar--mobile-open {
+    transform: translateX(0);
+  }
+}
+
+/* ---- Reduced Motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .sidebar__brand-text,
+  .sidebar__nav-label,
+  .sidebar--collapsed .sidebar__nav-item::after {
+    transition: none;
+  }
+}
