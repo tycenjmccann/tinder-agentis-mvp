@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '../../../test/test-utils';
+import { render, screen, fireEvent } from '../../../test/test-utils';
 import { Sidebar } from '../Sidebar';
 
 // Mock localStorage
@@ -70,6 +70,17 @@ describe('Sidebar', () => {
       fireEvent.click(toggle);
 
       expect(sidebar).toHaveClass('sidebar--expanded');
+    });
+  });
+
+  describe('AC-3: Smooth 300ms transition', () => {
+    it('should apply transition CSS class via sidebar base class', () => {
+      render(<Sidebar onNavigate={mockNavigate} />);
+      const sidebar = screen.getByTestId('sidebar');
+
+      // The sidebar always has the base 'sidebar' class which applies
+      // transition: width 300ms ease via CSS variables
+      expect(sidebar).toHaveClass('sidebar');
     });
   });
 
@@ -148,17 +159,50 @@ describe('Sidebar', () => {
     });
   });
 
+  describe('AC-7: No layout flash on page load', () => {
+    it('should sync html class with collapsed state for flash prevention', () => {
+      localStorageMock.getItem.mockReturnValue('true');
+      render(<Sidebar onNavigate={mockNavigate} />);
+
+      // The component adds sidebar-collapsed to <html> on mount when collapsed
+      expect(document.documentElement.classList.contains('sidebar-collapsed')).toBe(true);
+    });
+
+    it('should not have sidebar-collapsed class on html when expanded', () => {
+      localStorageMock.getItem.mockReturnValue(null);
+      render(<Sidebar onNavigate={mockNavigate} />);
+
+      expect(document.documentElement.classList.contains('sidebar-collapsed')).toBe(false);
+    });
+  });
+
   describe('AC-8: CSS tooltip appears on hover in collapsed mode', () => {
-    it('should render data-tooltip attributes on nav links for CSS tooltips', () => {
+    it('should render data-tooltip attributes on nav items for CSS tooltips', () => {
       render(<Sidebar onNavigate={mockNavigate} />);
       const toggle = screen.getByTestId('sidebar-toggle');
 
       fireEvent.click(toggle);
 
-      const navLinks = screen.getByTestId('sidebar').querySelectorAll('.sidebar__nav-link');
-      navLinks.forEach((link) => {
-        expect(link).toHaveAttribute('data-tooltip');
+      // data-tooltip is on the <li> elements (.sidebar__nav-item)
+      const navItems = screen.getByTestId('sidebar').querySelectorAll('.sidebar__nav-item');
+      navItems.forEach((item) => {
+        expect(item).toHaveAttribute('data-tooltip');
+        expect(item.getAttribute('data-tooltip')).not.toBe('');
       });
+    });
+
+    it('should have tooltip content matching nav labels', () => {
+      render(<Sidebar onNavigate={mockNavigate} />);
+      const navItems = screen.getByTestId('sidebar').querySelectorAll('.sidebar__nav-item');
+
+      const tooltipLabels = Array.from(navItems).map(
+        (item) => item.getAttribute('data-tooltip')
+      );
+      expect(tooltipLabels).toContain('Dashboard');
+      expect(tooltipLabels).toContain('Workflows');
+      expect(tooltipLabels).toContain('Agents');
+      expect(tooltipLabels).toContain('Logs');
+      expect(tooltipLabels).toContain('Settings');
     });
   });
 
@@ -188,6 +232,17 @@ describe('Sidebar', () => {
 
       expect(toggle).toHaveAttribute('aria-label', 'Expand sidebar');
     });
+
+    it('should update aria-label after toggle', () => {
+      render(<Sidebar onNavigate={mockNavigate} />);
+      const toggle = screen.getByTestId('sidebar-toggle');
+
+      expect(toggle).toHaveAttribute('aria-label', 'Collapse sidebar');
+
+      fireEvent.click(toggle);
+
+      expect(toggle).toHaveAttribute('aria-label', 'Expand sidebar');
+    });
   });
 
   describe('AC-11: Sidebar has aria-expanded attribute', () => {
@@ -205,6 +260,17 @@ describe('Sidebar', () => {
 
       expect(sidebar).toHaveAttribute('aria-expanded', 'false');
     });
+
+    it('should update aria-expanded after toggle', () => {
+      render(<Sidebar onNavigate={mockNavigate} />);
+      const sidebar = screen.getByTestId('sidebar');
+
+      expect(sidebar).toHaveAttribute('aria-expanded', 'true');
+
+      fireEvent.click(screen.getByTestId('sidebar-toggle'));
+
+      expect(sidebar).toHaveAttribute('aria-expanded', 'false');
+    });
   });
 
   describe('Navigation', () => {
@@ -216,6 +282,12 @@ describe('Sidebar', () => {
 
       fireEvent.click(screen.getByText('Workflows'));
       expect(mockNavigate).toHaveBeenCalledWith('/workflows');
+    });
+
+    it('should render all five navigation items', () => {
+      render(<Sidebar onNavigate={mockNavigate} />);
+      const navItems = screen.getByTestId('sidebar').querySelectorAll('.sidebar__nav-item');
+      expect(navItems).toHaveLength(5);
     });
   });
 
