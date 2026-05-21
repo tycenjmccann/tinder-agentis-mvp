@@ -130,12 +130,15 @@ export function Sidebar({ onNavigate }: SidebarProps) {
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               return (
-                <li key={item.id} className="sidebar__nav-item">
+                <li
+                  key={item.id}
+                  className="sidebar__nav-item"
+                  data-tooltip={item.label}
+                >
                   <button
                     className="sidebar__nav-link"
                     onClick={() => handleNavClick(item.route)}
                     aria-label={isCollapsed ? item.label : undefined}
-                    data-tooltip={item.label}
                     type="button"
                   >
                     <Icon
