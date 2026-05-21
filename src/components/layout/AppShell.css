@@ -1,0 +1,36 @@
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-shell__main {
+  flex: 1;
+  margin-left: var(--sidebar-width-expanded);
+  transition: margin-left var(--sidebar-transition-duration) var(--sidebar-transition-easing);
+  min-width: 0;
+  padding: var(--space-6);
+}
+
+/* When sidebar is collapsed, reduce main content margin */
+.sidebar--collapsed ~ .app-shell__main,
+.app-shell:has(.sidebar--collapsed) .app-shell__main {
+  margin-left: var(--sidebar-width-collapsed);
+}
+
+/* Flash prevention: apply correct margin before React hydrates */
+.sidebar-is-collapsed .app-shell__main {
+  margin-left: var(--sidebar-width-collapsed);
+}
+
+/* Mobile: no margin */
+@media (max-width: 639px) {
+  .app-shell__main {
+    margin-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell__main {
+    transition: none;
+  }
+}
