@@ -1,0 +1,22 @@
+{
+  "name": "tinder-agentis-mvp",
+  "version": "1.0.0",
+  "description": "Tinder Agentis MVP - Avatar management Lambda handlers",
+  "main": "dist/handlers/avatar/delete.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.600.0",
+    "@aws-sdk/client-s3": "^3.600.0",
+    "@aws-sdk/lib-dynamodb": "^3.600.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.140",
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}
